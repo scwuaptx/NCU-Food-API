@@ -1,6 +1,7 @@
 NCU Food API
 ===
 
+##json 格式##
 ```json
 {
   "name": "捷節廚房",
@@ -18,4 +19,13 @@ NCU Food API
     "lng": 121.191
   },
 }
+```
+
+```
+name: 餐廳名字  
+id: 餐廳編號  
+address: 餐廳地址  
+vicinity: 餐廳大略位置 類別有：宵夜街,後門,松苑,七餐,九餐,外賣
+telephone: 餐廳電話  
+types: 餐廳類別 類別有：早餐,午晚餐,宵夜,飲料
 ```
