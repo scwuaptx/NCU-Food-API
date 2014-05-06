@@ -1,0 +1,99 @@
+#!/usr/bin/python
+#-*-coding:utf-8 -*-
+
+import simplejson as json
+import MySQLdb
+import collections
+import cgi,cgitb
+import json
+
+#print "Content-type:text/html\n\n"
+print "Content-type: application/json\n\n"
+form = cgi.FieldStorage()
+
+search = ""
+prefer = ""
+vicinity = ""
+types = ""
+condition = ""
+table = ""
+flag = False
+if 'vicinity' in form and 'types' in form :
+	condition = condition + " WHERE "
+	vicinity = "vicinity LIKE '%" + form.getvalue('vicinity') + "%'"
+	types = "types LIKE '%" + form.getvalue('types') + "%'"
+	condition = vicinity + " AND " + types
+else :
+	condition = condition + " WHERE "
+	if 'vicinity' in form :
+		vicinity = form.getvalue('vicinity')
+		if vicinity == 'all' :
+			condition = ""
+		else :
+			vicinity = "vicinity LIKE '%" + vicinity + "%'"
+			condition = condition + vicinity
+	if 'types' in form :
+		types = "types LIKE '%" + form.getvalue('types') + "%'"
+		condition = condition + types
+	if 'search' in form :
+		search = "name LIKE '%" + form.getvalue('search') + "%'"
+		condition = condition + search 
+	if 'id' in form :
+		flag = True
+		idnum = form.getvalue('id') 
+		condition = condition + "id = '" + idnum + "'"	
+		if 'prefer' in form :
+			prefer = form.getvalue('prefer')
+
+mydb = MySQLdb.connect(host='Server',user='UID',passwd='PASSWORD',db='DATABASE',charset='utf8')
+cursor = mydb.cursor()
+SQLsyntaxfood = "SELECT * FROM RestaurantTable" + condition
+
+
+cursor.execute(SQLsyntaxfood)
+
+rows = cursor.fetchall()
+columns = [desc[0] for desc in cursor.description]
+results = dict()
+result = []
+location = dict()
+rate = dict()
+for row in rows :
+	row = dict(zip(columns,row))
+	location['lat'] = row.pop('latitude')
+	location['lng'] = row.pop('longitude')
+	row['location'] = location
+	rate['like'] = row.pop('like_people')
+	rate['dislike'] = row.pop('dislike_people')
+	row['rate'] = rate
+	if prefer == 'likeofhash' :
+		syntax = rate['like'] + 1
+		SQLsyntaxprefer = "UPDATE RestaurantTable SET like_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
+		cursor.execute(SQLsyntaxprefer)
+		cursor.connection.commit()
+	if prefer == 'dislikehash' :
+		syntax = rate['dislike'] + 1
+		SQLsyntaxprefer = "UPDATE RestaurantTable SET dislike_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
+		cursor.execute(SQLsyntaxprefer)
+		cursor.connection.commit()
+	try :			
+		if flag is True :
+			add_id = row['add_id']
+			table = "menu_" + str(add_id)
+			SQLsyntaxmenu = "SELECT * FROM " + table
+			cursor.execute(SQLsyntaxmenu)
+			MenuRows = cursor.fetchall()
+			MenuColumns = [desc[0] for desc in cursor.description]
+			menu = [] 
+			for MenuRow in MenuRows :
+				MenuRow = dict(zip(MenuColumns,MenuRow))
+				menu.append(MenuRow) 
+			row['menu'] = menu
+	except :
+		flag = False
+	row.pop('add_id')
+	result.append(row)
+
+results['results'] = result
+subjects = json.dumps(results,indent = 4)
+print subjects
