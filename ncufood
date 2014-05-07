@@ -15,14 +15,19 @@ search = ""
 prefer = ""
 vicinity = ""
 types = ""
+hot = ""
 condition = " WHERE "
 table = ""
 flag = False
 if 'vicinity' in form and 'types' in form :
 	vicinity = "vicinity LIKE '%" + form.getvalue('vicinity') + "%'"
 	types = "types LIKE '%" + form.getvalue('types') + "%'"
-	condition = vicinity + " AND " + types
-else :
+	condition = condition + vicinity + " AND " + types
+elif 'search' in form and 'vicinity' in form :
+	search = "name LIKE '%" + form.getvalue('search') + "%'"
+	vicinity = "vicinity LIKE '%" + form.getvalue('vicinity') + "%'"
+	condition = condition + search + " AND " + vicinity 
+else :	
 	if 'vicinity' in form :
 		vicinity = form.getvalue('vicinity')
 		if vicinity == 'all' :
@@ -30,6 +35,11 @@ else :
 		else :
 			vicinity = "vicinity LIKE '%" + vicinity + "%'"
 			condition = condition + vicinity
+	#list top 10 of restaurant
+	if 'hot' in form :
+		hot = form.getvalue('hot')
+		if 'all' == hot :
+			condition = " ORDER BY 'like_people' DESC LIMIT 10 "
 	if 'types' in form :
 		types = "types LIKE '%" + form.getvalue('types') + "%'"
 		condition = condition + types
@@ -41,12 +51,12 @@ else :
 		idnum = form.getvalue('id') 
 		condition = condition + "id = '" + idnum + "'"	
 		if 'prefer' in form :
-			prefer = form.getvalue('prefer')
+				prefer = form.getvalue('prefer')
 
 #import SQL data
-mydb = MySQLdb.connect(host='SERVER',user='User',passwd='Password',db='database',charset='utf8')
+mydb = MySQLdb.connect(host='SERVER',user='USER',passwd='PASSWORD',db='DATABASE',charset='utf8')
 cursor = mydb.cursor()
-SQLsyntaxfood = "SELECT * FROM sometable" + condition
+SQLsyntaxfood = "SELECT * FROM TABLE" + condition
 
 #Execute syntax of SQL
 cursor.execute(SQLsyntaxfood)
@@ -66,14 +76,16 @@ for row in rows :
 	rate['like'] = row.pop('like_people')
 	rate['dislike'] = row.pop('dislike_people')
 	row['rate'] = rate
+	location = dict()
+	rate = dict()
 	if prefer == 'likehash' :
 		syntax = rate['like'] + 1
-		SQLsyntaxprefer = "UPDATE sometable SET like_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
+		SQLsyntaxprefer = "UPDATE TABLE SET like_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
 		cursor.execute(SQLsyntaxprefer)
 		cursor.connection.commit()
 	if prefer == 'dislikehash' :
 		syntax = rate['dislike'] + 1
-		SQLsyntaxprefer = "UPDATE sometable SET dislike_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
+		SQLsyntaxprefer = "UPDATE TABLE SET dislike_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
 		cursor.execute(SQLsyntaxprefer)
 		cursor.connection.commit()
 	#Data of Menu
@@ -88,12 +100,13 @@ for row in rows :
 			menu = []
 			FoodClass = dict()
 			NumofType = []
-			#Type of Menu
+			#Get the Number of Types
 			for foodtypes in MenuRows :
 				if foodtypes[0] not in NumofType :
 					 NumofType.append(foodtypes[0])
 			for types in NumofType :
 				FoodClass[types] = []
+			#Data of the MenuResult
 			for MenuRow in MenuRows :
 				MenuRow = dict(zip(MenuColumns,MenuRow))
 				FoodClass[MenuRow['food_types']].append(MenuRow)
