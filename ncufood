@@ -7,7 +7,7 @@ import collections
 import cgi,cgitb
 import json
 
-#print "Content-type:text/html\n\n"
+#Get the variable from URL
 print "Content-type: application/json\n\n"
 form = cgi.FieldStorage()
 
@@ -15,16 +15,14 @@ search = ""
 prefer = ""
 vicinity = ""
 types = ""
-condition = ""
+condition = " WHERE "
 table = ""
 flag = False
 if 'vicinity' in form and 'types' in form :
-	condition = condition + " WHERE "
 	vicinity = "vicinity LIKE '%" + form.getvalue('vicinity') + "%'"
 	types = "types LIKE '%" + form.getvalue('types') + "%'"
 	condition = vicinity + " AND " + types
 else :
-	condition = condition + " WHERE "
 	if 'vicinity' in form :
 		vicinity = form.getvalue('vicinity')
 		if vicinity == 'all' :
@@ -45,13 +43,15 @@ else :
 		if 'prefer' in form :
 			prefer = form.getvalue('prefer')
 
-mydb = MySQLdb.connect(host='Server',user='UID',passwd='PASSWORD',db='DATABASE',charset='utf8')
+#import SQL data
+mydb = MySQLdb.connect(host='SERVER',user='User',passwd='Password',db='database',charset='utf8')
 cursor = mydb.cursor()
-SQLsyntaxfood = "SELECT * FROM RestaurantTable" + condition
+SQLsyntaxfood = "SELECT * FROM sometable" + condition
 
-
+#Execute syntax of SQL
 cursor.execute(SQLsyntaxfood)
 
+#Tranfer SQL data to json
 rows = cursor.fetchall()
 columns = [desc[0] for desc in cursor.description]
 results = dict()
@@ -66,16 +66,17 @@ for row in rows :
 	rate['like'] = row.pop('like_people')
 	rate['dislike'] = row.pop('dislike_people')
 	row['rate'] = rate
-	if prefer == 'likeofhash' :
+	if prefer == 'likehash' :
 		syntax = rate['like'] + 1
-		SQLsyntaxprefer = "UPDATE RestaurantTable SET like_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
+		SQLsyntaxprefer = "UPDATE sometable SET like_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
 		cursor.execute(SQLsyntaxprefer)
 		cursor.connection.commit()
 	if prefer == 'dislikehash' :
 		syntax = rate['dislike'] + 1
-		SQLsyntaxprefer = "UPDATE RestaurantTable SET dislike_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
+		SQLsyntaxprefer = "UPDATE sometable SET dislike_people = " + str(syntax) + " WHERE add_id = " + str(row['add_id'])
 		cursor.execute(SQLsyntaxprefer)
 		cursor.connection.commit()
+	#Data of Menu
 	try :			
 		if flag is True :
 			add_id = row['add_id']
@@ -84,10 +85,24 @@ for row in rows :
 			cursor.execute(SQLsyntaxmenu)
 			MenuRows = cursor.fetchall()
 			MenuColumns = [desc[0] for desc in cursor.description]
-			menu = [] 
+			menu = []
+			FoodClass = dict()
+			NumofType = []
+			for foodtypes in MenuRows :
+				if foodtypes[0] not in NumofType :
+					 NumofType.append(foodtypes[0])
+			for types in NumofType :
+				FoodClass[types] = []
 			for MenuRow in MenuRows :
 				MenuRow = dict(zip(MenuColumns,MenuRow))
-				menu.append(MenuRow) 
+				FoodClass[MenuRow['food_types']].append(MenuRow)
+				MenuRow.pop('food_types')
+			for types in NumofType :
+				Foodtype = dict()
+				Foodtype['Foodtypes'] = types
+				Foodtype['MenuResult'] = FoodClass[types]
+				menu.append(Foodtype)
+				
 			row['menu'] = menu
 	except :
 		flag = False
@@ -96,4 +111,5 @@ for row in rows :
 
 results['results'] = result
 subjects = json.dumps(results,indent = 4)
+#output data of json 
 print subjects
